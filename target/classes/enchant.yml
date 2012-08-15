@@ -1,0 +1,63 @@
+ARROW_DAMAGE:
+  name: Power
+  weight: 10
+ARROW_FIRE:
+  name: Flame
+  weight: 2
+ARROW_INFINITE:
+  name: Infinity
+  weight: 1
+ARROW_KNOCKBACK:
+  name: Punch
+  weight: 2
+DAMAGE_ALL:
+  name: Sharpness
+  weight: 10
+DAMAGE_ARTHROPODS:
+  name: Bane of Arthropods
+  weight: 5
+DAMAGE_UNDEAD:
+  name: Smite
+  weight: 5
+DIG_SPEED:
+  name: Efficiency
+  weight: 10
+DURABILITY:
+  name: Unbreaking
+  weight: 5
+FIRE_ASPECT:
+  name: Fire Aspect
+  weight: 2
+KNOCKBACK:
+  name: Knockback
+  weight: 5
+LOOT_BONUS_BLOCKS:
+  name: Fortune
+  weight: 2
+LOOT_BONUS_MOBS:
+  name: Looting
+  weight: 2
+OXYGEN:
+  name: Respiration
+  weight: 2
+PROTECTION_ENVIRONMENTAL:
+  name: Protection
+  weight: 10
+PROTECTION_EXPLOSIONS:
+  name: Blast Protection
+  weight: 2
+PROTECTION_FALL:
+  name: Feather Fall
+  weight: 5
+PROTECTION_FIRE:
+  name: Fire Protection
+  weight: 5
+PROTECTION_PROJECTILE:
+  name: Projectile Protection
+  weight: 5
+SILK_TOUCH:
+  name: Silk Touch
+  weight: 1
+WATER_WORKER:
+  name: Aqua Affinity
+  weight: 2

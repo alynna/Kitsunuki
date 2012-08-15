@@ -1,0 +1,72 @@
+config:
+  enable: true
+wp:
+  setcost: 0
+  usecost: 5
+repair:
+  enchant:
+    weight: 1.0
+    level: 2.0
+    xp: 10
+  regular:
+    base: 100
+    perdamage: 1
+  debug: true
+convert:
+  gravel:
+    from: '13:0'
+    take: 16
+    to: '318:0'
+    give: 1
+    cost: 0
+drops:
+  glass:
+    from: '20:0'
+    to: '12:0'
+    factor: 1
+selldrops:
+- spidereye
+- bone
+- enderpearl
+- rottenmeat
+- gunpowder
+- ghasttear
+- blazerod
+- slimeball
+buy:
+  arrow:
+    item: '262:0'
+    count: 16
+    for: 5
+  cookie:
+    item: '357:0'
+    count: 12
+    for: 5
+  torch:
+    item: '50:0'
+    count: 16
+    for: 5
+  bow:
+    item: '261:0'
+    count: 1
+    for: 5
+  axe:
+    item: '275:0'
+    count: 1
+    for: 5
+  pickaxe:
+    item: '274:0'
+    count: 1
+    for: 5
+  shovel:
+    item: '273:0'
+    count: 1
+    for: 5
+  sword:
+    item: '272:0'
+    count: 1
+    for: 5
+  hoe:
+    item: '291:0'
+    count: 1
+    for: 5

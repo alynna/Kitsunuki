@@ -1,0 +1,64 @@
+name: Kitsunuki
+version: 1.3.1-1.5
+description: Default module for the Kitsunuki Minecraft server
+author: Alynna
+authors: [alynna, alynnafoxie]
+main: net.kitsunet.kitsunuki.Kitsune
+database: false
+softdepend: 
+  - Vault
+  - Essentials
+commands:
+   kn:
+      description: The extension plugin for the kitsunuki server.
+      usage: /<command> [reload|version|save|help]
+      permission: kitsunuki.admin
+      permission-message: You don't have <permission>
+   selldrops:
+      description: Sell any specially valued drops directly to the server.
+      usage: /<command>
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   convert:
+      description: Convert one item to another.
+      usage: /<command> [resource]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   rep:
+      description: Repair an item for a cost in items/money/xp
+      usage: /<command> [estimate|confirm|disenhchant]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   buy:
+      description: Buy specific items from the server.
+      usage: /<command> [resource]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   xp:
+      description: Get information about your XP level.
+      usage: /<command>
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   wp:
+      description: Get and set personal warps.
+      usage: /<command> <get|set|[warpname]>
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   tps:
+      description: Display info about lagginess
+      usage: /<command>
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+permissions:
+   kitsunuki.default:
+      description: The default permissions to do anything.
+      default: true
+   kitsunuki.mod:
+      description: Moderator permissions
+      default: op
+   kitsunuki.admin:
+      description: The default permissions to do almost anything.
+      default: op
+   kitsunuki.op:
+      description: The default permissions to do anything.
+      default: op

@@ -169,7 +169,7 @@ public class KitsuCommands implements CommandExecutor {
 				ItemStack tostack = new ItemStack(toid, give);
 				while (taken < count) {
 					if (!yip.tails.has(player.getName(), cost)) break;
-					if (!inventory.contains(fromid, take)) break;
+					if (!yip.invContains(inventory, fromstack)) break;
 					inventory.removeItem(fromstack);
 					inventory.addItem(tostack);
 					if (cost>0)
@@ -301,7 +301,7 @@ public class KitsuCommands implements CommandExecutor {
 			for (String item: items) {
 				try {
 					if (yip.ess.getItemDb().get(item) != null) {
-						itemstack = yip.ess.getItemDb().get(item);
+						itemstack = yip.ess.getItemDb().get(item).clone();
 						itemstack.setAmount(1);
 					} else continue;
 				} catch (Exception e) {
@@ -309,11 +309,14 @@ public class KitsuCommands implements CommandExecutor {
 				}
 				Integer count = 0;
 				Double subtotal = 0.0;
-				while (inventory.contains(itemstack.getType(), 1)) {
-					inventory.removeItem(itemstack);
+				while (inventory.removeItem(itemstack).size()==0) {					
 					yip.tails.depositPlayer(player.getName(), yip.ess.getWorth().getPrice(itemstack));
 					count++; subtotal += yip.ess.getWorth().getPrice(itemstack);
 					total += yip.ess.getWorth().getPrice(itemstack);
+					if (count>=2560) {
+						yip.log.warning("Grand Overflow in liquidate while selling: "+itemstack);
+						break;
+					}
 				}
 				if (count>0) yip.at(player,"&6Sold &e"+count.toString()+" &b"+itemstack.getType().toString().toLowerCase()+"&6 for &a"+yip.currency(subtotal));						
 			}
@@ -369,7 +372,7 @@ public class KitsuCommands implements CommandExecutor {
 				bottle.setAmount(bottle.getAmount()-1);
 				inventory.setItemInHand(bottle);
 				yip.xp.adjXP(player, xpstore);
-				yip.at(player, "&6You have drunk an experience potion containing &a"+xpstore+"XP&6.  Are you buzzin' yet?");
+				yip.at(player, "&6You have drunk an experience potion containing &a"+xpstore+"XP&6.  Are you buzzin' yet?");					
 			} else if (args[0].equalsIgnoreCase("check")) {
 				PlayerInventory inventory = player.getInventory();
 				ItemStack bottle = inventory.getItemInHand();
@@ -542,18 +545,19 @@ public class KitsuCommands implements CommandExecutor {
 		}			
 		ItemStack held = new ItemStack(give); held.setAmount(1);
 		inventory.setItemInHand(new ItemStack(Material.AIR, 0));
-		if (!inventory.contains(held.getType(), 1)) {
+		if (!yip.invContains(inventory, held, 1)) {
 			yip.at(player, "&6Could not find items to stack.  Remember the items should be identical.");
 			inventory.setItemInHand(give);
 			return true;			
 		}
-		while (inventory.contains(held.getType(), 1)) {
+		while (yip.invContains(inventory, held, 1)) {
 			inventory.removeItem(held);
 			give.setAmount(give.getAmount()+1);
 			if (give.getAmount() >= count)
 				break;
 		}
 		inventory.setItemInHand(give);
+		
 		if (give.getAmount() > give.getMaxStackSize())
 			cost = (cost*(give.getAmount()-give.getMaxStackSize()));
 		else

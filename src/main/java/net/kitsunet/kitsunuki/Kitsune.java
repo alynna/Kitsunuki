@@ -14,6 +14,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -159,6 +161,29 @@ public class Kitsune extends JavaPlugin {
 		else
 			this.getServer().broadcastMessage("&6[Server]&r "+clr);
 	}
+ 	// Method to match items with their metadata.  This function 
+ 	// ignores the size of the itemstack and instead is cognizant of
+ 	// the item's data.   It returns the number of matching items
+ 	// found.
+ 	public int invCount(Inventory inventory, ItemStack itemstack) {
+ 		if (!inventory.contains(itemstack.getType(),1)) return 0;
+ 		int count = 0;
+		for (ItemStack item: inventory.all(itemstack.getType()).values()) {
+			//this.log.info(itemstack+":"+itemstack.getData()+" "+item+":"+item.getData());
+			if (itemstack.getData().equals(item.getData())) {
+				count += item.getAmount();
+			}
+		}
+		//this.log.info(""+count);
+ 		return count;
+ 	}
+ 	// Simple wrapper methods for invCount, to see if you have x items in your inventory.
+ 	public boolean invContains(Inventory inventory, ItemStack itemstack) {
+ 		return (invCount(inventory, itemstack) >= itemstack.getAmount());
+ 	}
+ 	public boolean invContains(Inventory inventory, ItemStack itemstack, int amount) {
+ 		return (invCount(inventory, itemstack) >= amount);
+ 	}
  	@Override
  	public void onEnable() {
  		if (yerf == null)

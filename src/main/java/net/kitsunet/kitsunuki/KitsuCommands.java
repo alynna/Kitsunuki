@@ -1,10 +1,15 @@
 package net.kitsunet.kitsunuki;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+
+import net.minecraft.server.Item;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -17,11 +22,16 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
+import net.sourceforge.jeval.Evaluator;
+
+import com.earth2me.essentials.user.Inventory;
+import com.google.common.base.Joiner;
 
 public class KitsuCommands implements CommandExecutor {
 	private Kitsune yip;
@@ -41,16 +51,32 @@ public class KitsuCommands implements CommandExecutor {
 			}
 			yip.at(player,"&3Things available to buy: &b"+x);
 		} else {
-			int mode=0;
+			int mode = 0;
+			int units = 1;
+			int tmp = 0;
 			String want = args[0];
-			if (args[0].equalsIgnoreCase("price")) {
-				mode = 1; want = args[1];
-			}
+			if (args.length == 2) {
+				if (args[0].equalsIgnoreCase("price")) {
+					mode = 1; want = args[1];
+				} else {
+					units = Integer.valueOf(args[1]);
+					if (units < 1) units = 1;
+					if (units > 64) units = 64;
+				}
+			} 
+			
 			// lets do some buying...
 			String item = yip.getConfig().getString("buy."+want+".item");
 			Material itemid = Material.AIR;
-			Double itemcost = yip.getConfig().getDouble("buy."+want+".for",1.0);
-			Integer itemcount = yip.getConfig().getInt("buy."+want+".count",1);
+			Double itemcost = 0.0;
+			Integer itemcount = 0;
+			while (tmp < units) {
+				itemcost += yip.getConfig().getDouble("buy."+want+".for",1.0);
+				itemcount += yip.getConfig().getInt("buy."+want+".count",1);
+				if (itemcount+yip.getConfig().getInt("buy."+want+".count",1) > 64)
+					break;
+				tmp++;
+			}
 			if (item == null) {
 				yip.at(player,"The item '"+want+"' cannot be bought from the server." );
 				return true;
@@ -106,7 +132,7 @@ public class KitsuCommands implements CommandExecutor {
 				fromid.getNewData((byte)Integer.parseInt(from.split(":")[1]));
 			}
 			if (to.split(":").length == 0) {
-				yip.at(player,"The item '"+conv+"' cannot completed as dialed.");
+				yip.at(player,"The item '"+conv+"' cannot be completed as dialed.");
 				yip.log.warning("config.yml at conv."+conv+".from: no item id!");
 				return true;				
 			} else if (to.split(":").length >= 1) {
@@ -121,12 +147,17 @@ public class KitsuCommands implements CommandExecutor {
 			if (args.length >= 2) {
 				Integer count=0;
 				if (args[1].equalsIgnoreCase("all"))
-					count = 65535;
+					count = 65536;
 				else if (args[1].equalsIgnoreCase("hand"))
 					count = -1;
-				else if (Integer.parseInt(args[1]) > 0)
-					count = Integer.parseInt(args[1]);
-				else count = 0;
+				else {
+					try {
+						if (Integer.parseInt(args[1]) > 0)
+							count = Integer.parseInt(args[1]);
+					} catch (Exception e) {
+						count = 0;
+					}				
+				}
 				if (count == 0) {
 					yip.at(player, "Invalid count for conversion specified.");
 					return true;
@@ -225,7 +256,11 @@ public class KitsuCommands implements CommandExecutor {
 			}
 			if (confirmed) {
 				held.setDurability((short) 0);
-				yip.xp.adjXP(player, -(xp));
+				try {
+					yip.xp.adjXP(player, -(xp));
+				} catch (Exception e) {
+					yip.xp.setXP(player, 0);
+				}
 				yip.tails.withdrawPlayer(player.getName(), cost);
 				yip.at(player, response+" Item repaired!");
 			} else {
@@ -234,13 +269,34 @@ public class KitsuCommands implements CommandExecutor {
 		}
 		return true;
 	}
-	public boolean selldrops(Player player, String[] args) {
-		List<String> items = yip.getConfig().getStringList("selldrops");
+	public boolean liquidate(Player player, String[] args) {
+		ConfigurationSection categories = yip.getConfig().getConfigurationSection("liquidate");
+		if (args.length == 0) {
+			yip.at(player, "&b=== &6Liquidatable assets &b===");
+			for (String category: categories.getKeys(false)) {
+				String x = "&6"+category+"&r: &a";
+				List<String> items = yip.getConfig().getStringList("liquidate."+category);
+				for (String item: items) {
+					try {
+						if (!(yip.ess.getItemDb().get(item) == null))
+							x += yip.ess.getItemDb().get(item).getType().toString().toLowerCase()+" ";
+					} catch (Exception e) {
+						yip.log.severe(e.toString());
+					}
+				}
+				yip.at(player, x);
+			}
+			return true;
+		}
 		PlayerInventory inventory = player.getInventory();
-		if (args.length == 0) { // normal command to sell all drops without parameters
+		if (args.length == 1) { // normal command to sell all drops without parameters
+			List<String> items = yip.getConfig().getStringList("liquidate."+args[0]);
+			if (items.size() == 0) {
+				yip.at(player, "&4Not a valid category.  Try '/liquidate' alone for a list of categories.");
+				return true;
+			}
 			Double total = 0.0;
 			Double prev = yip.tails.getBalance(player.getName());
-			String x = "";
 			ItemStack itemstack = new ItemStack(Material.AIR,1);
 			for (String item: items) {
 				try {
@@ -263,24 +319,11 @@ public class KitsuCommands implements CommandExecutor {
 			}
 			yip.at(player,"&6Grand total: &a"+yip.currency(total)+"&6 earned [&a"+yip.currency(prev)+"&6 -> &a"+
 					yip.currency(yip.tails.getBalance(player.getName()))+"&6]");						
-		} else {
-			String x = "";
-			for (String item: items) {
-				try {
-					if (!(yip.ess.getItemDb().get(item) == null))
-						x += yip.ess.getItemDb().get(item).getType().toString().toLowerCase()+" ";
-					else
-						yip.log.info("Item "+item+" failed to be looked up.");
-				} catch (Exception e) {
-					yip.log.severe(e.toString());
-				}
-			}
-			yip.at(player, "&6Liquidatable drops: &b"+x);
 		}
 		return true;
 	}
 	public boolean xp(Player player, String[] args) {
-		if (args.length == 1) {
+		if (args.length >= 1) {
 			if (args[0].equalsIgnoreCase("on")) {
 				yip.userData().set(player.getName()+".xp.reporting", true);
 				yip.at(player, "&d[&eXP&d] XP reporting is now &aON&r.");
@@ -289,7 +332,57 @@ public class KitsuCommands implements CommandExecutor {
 				yip.userData().set(player.getName()+".xp.reporting", false);
 				yip.at(player, "&d[&eXP&d] XP reporting is now &aOFF&r.");				
 				return true;
-			}  
+			} else if (args[0].equalsIgnoreCase("bottle")) {
+				PlayerInventory inventory = player.getInventory();
+				ItemStack itemstack = new ItemStack(Material.EXP_BOTTLE,1);
+				Integer xpstore = 17;
+				if (args.length == 2) {
+					try {
+						xpstore = Integer.valueOf(args[1]);
+					} catch (Exception e) {
+						xpstore = yip.xp.getTotalExperience(player);
+					}
+				} else xpstore = yip.xp.getTotalExperience(player);
+				if (xpstore < 17) xpstore = 17;
+				if (xpstore > yip.xp.getTotalExperience(player)) xpstore = yip.xp.getTotalExperience(player);
+				if (yip.xp.getTotalExperience(player) < xpstore) {
+					yip.at(player, "You do not have enough XP to create that experience potion.");
+					return true;
+				}
+				itemstack.setDurability((short)(xpstore % 65536));
+				yip.xp.adjXP(player, -(xpstore));
+				inventory.addItem(itemstack);
+				yip.at(player, "&6You have created an experience potion containing &a"+xpstore+"XP&6.");
+			} else if (args[0].equalsIgnoreCase("drink")) {
+				PlayerInventory inventory = player.getInventory();
+				ItemStack bottle = inventory.getItemInHand();
+				if (bottle.getType() != Material.EXP_BOTTLE) {
+					yip.at(player, "&4That is not an experience bottle!  You are unable to drink &6"+bottle.getType().name()+"&4.");
+					return true;
+				}
+				Integer xpstore = 0;
+				if (bottle.getDurability() < 17) {
+					xpstore = new Random().nextInt(10)+10;
+				} else {
+					xpstore = (Integer)(bottle.getDurability() % 65536);
+				}
+				bottle.setAmount(bottle.getAmount()-1);
+				inventory.setItemInHand(bottle);
+				yip.xp.adjXP(player, xpstore);
+				yip.at(player, "&6You have drunk an experience potion containing &a"+xpstore+"XP&6.  Are you buzzin' yet?");
+			} else if (args[0].equalsIgnoreCase("check")) {
+				PlayerInventory inventory = player.getInventory();
+				ItemStack bottle = inventory.getItemInHand();
+				if (bottle.getType() != Material.EXP_BOTTLE) {
+					yip.at(player, "&4That is not an experience bottle!  You are unable to drink &6"+bottle.getType().name()+"&4.");
+					return true;
+				}
+				if (bottle.getDurability() < 17)
+					yip.at(player, "&6This experience potion seems to have &bbetween 10 and 20XP&6 in it.");
+				else
+					yip.at(player, "&6This experience potion seems to have &b"+bottle.getDurability()+"XP&6 in it.");
+				return true;
+			}
 		}
 		yip.at(player, "&d[&eXP&d] &r"+player.getDisplayName()+"&6 has &b"+Integer.toString(yip.xp.getXP(player))+
 				"&6xp (L&b"+player.getLevel()+"&6), &b"+
@@ -357,8 +450,7 @@ public class KitsuCommands implements CommandExecutor {
 				}
 				Vector pos = yip.userData().getVector(player.getName()+".wp."+wpname+".pos");
 				yip.at(player, "&d[&eWP&d] &6Waypoint &e"+wpname+"&6 located at &b["+
-						yip.dbl2(pos.getX())+", "+yip.dbl2(pos.getY())+", "+yip.dbl2(pos.getZ())+
-						"] &6in &a"+wld.getName()+"&6.");
+						yip.dbl2(pos.getX())+", "+yip.dbl2(pos.getY())+", "+yip.dbl2(pos.getZ()));
 			} else if (args[0].equalsIgnoreCase("set")) {
 				yip.userData().set(player.getName()+".wp."+wpname+".world",player.getLocation().getWorld().getName());
 				yip.userData().set(player.getName()+".wp."+wpname+".pos",player.getLocation().toVector());
@@ -393,19 +485,21 @@ public class KitsuCommands implements CommandExecutor {
 	public boolean kn(Player player, String[] args) {
 		if (args.length == 0) {
 			if (player == null)
-				yip.log.info("Kitsunuki Extension Plugin v1.5");		
+				yip.log.info("Kitsunuki Extension Plugin v"+yip.getDescription().getVersion());		
 			else {
-				yip.at(player, "Kitsunuki Extension Plugin v1.5");
+				yip.at(player, "Kitsunuki Extension Plugin v"+yip.getDescription().getVersion());
 				yip.at(player, "/kn reload -- Reload configuration");
-				yip.at(player, "/kn save -- Save configuration now");
+				yip.at(player, "/kn save -- Save configuration");
 			}
 		} else if (args[0].equalsIgnoreCase("reload")) {
+			if (!player.hasPermission("kitsunuki.admin")) { yip.at(player, "&4Permission denied."); return true; }
 			yip.reloadConfig();
 			yip.reloadEnchantConfig();
 			yip.reloadUserConfig();
 			yip.reloadWorldConfig();
 			yip.at(player, "Kitsunuki configs reloaded from disk.");
 		} else if (args[0].equalsIgnoreCase("save")) {
+			if (!player.hasPermission("kitsunuki.admin")) { yip.at(player, "&4Permission denied."); return true; }
 			yip.saveConfig();
 			yip.saveEnchantConfig();
 			yip.saveUserConfig();
@@ -414,8 +508,160 @@ public class KitsuCommands implements CommandExecutor {
 		}
 		return true;
 	}
-	public boolean tps(Player player, String[] args) {
-		return false;
+	public boolean stack(Player player, String[] args) {
+		int count = 64;
+		Double cost = yip.getConfig().getDouble("stack.cost", 8);
+		if (args.length == 1)
+			try {
+				count = Integer.valueOf(args[0]);
+			} catch (Exception e) {
+				count = 64;
+			}
+		else {
+			yip.at(player, "&6/stack <count|all> -- &rCreates overloaded stacks (up to 64 items)");
+			yip.at(player, "&aHold the item in your hand then use /stack.  Other items in your inventory will be placed into the stack to the amount given.");
+			yip.at(player, "&6Every item above the normal stack size for the item will cost &c"+yip.currency(cost)+"&6.");
+			return true;
+		}
+		if (count < 0 || count > 64) count = 64;
+		PlayerInventory inventory = player.getInventory();
+		ItemStack give = new ItemStack(inventory.getItemInHand());
+		if (give.getType()==Material.EXP_BOTTLE) {
+			yip.at(player, "&eCowardly refusing to allow you to stack XP potions to save you from losing the extra XP stored in them.  "+
+		                   "To create a new stack of XP potions, it's recommended you drink the potions you want to stack, then create a new "+
+					       "stack using &d/xp bottle [amount]&e a few times.");
+			return true;
+		}
+		if (give.getAmount() >= count) {
+			yip.at(player, "&6Your stack is already at least that large.");
+			return true;
+		}
+		if (!give.getEnchantments().isEmpty()) {
+			yip.at(player, "&4Sorry, you cannot stack items that are enchanted.");
+			return true;
+		}			
+		ItemStack held = new ItemStack(give); held.setAmount(1);
+		inventory.setItemInHand(new ItemStack(Material.AIR, 0));
+		if (!inventory.contains(held.getType(), 1)) {
+			yip.at(player, "&6Could not find items to stack.  Remember the items should be identical.");
+			inventory.setItemInHand(give);
+			return true;			
+		}
+		while (inventory.contains(held.getType(), 1)) {
+			inventory.removeItem(held);
+			give.setAmount(give.getAmount()+1);
+			if (give.getAmount() >= count)
+				break;
+		}
+		inventory.setItemInHand(give);
+		if (give.getAmount() > give.getMaxStackSize())
+			cost = (cost*(give.getAmount()-give.getMaxStackSize()));
+		else
+			cost = 0.0;
+		if (cost > 0.0) {
+			if (yip.tails.has(player.getName(), cost)) {
+				yip.tails.withdrawPlayer(player.getName(), cost);
+			} else {
+				yip.tails.withdrawPlayer(player.getName(), yip.tails.getBalance(player.getName()));
+				cost = yip.tails.getBalance(player.getName());
+			}
+			yip.at(player, "&6You have overloaded a stack of &e"+give.getAmount()+" &b"+give.getType().toString()+"&6 for &a"+yip.currency(cost));
+		} else {
+			yip.at(player, "&6You have consolidated a stack of &e"+give.getAmount()+" &b"+give.getType().toString()+"&6.");			
+		}
+		return true;
+	}
+	public boolean ww(Player player, String[] args) {
+		yip.at(player, "&e==[ &a"+yip.getServer().getOnlinePlayers().length+"&6/&a"+
+				yip.getServer().getMaxPlayers()+"&6 players online &e]=="
+				);
+		for (Player target: yip.getServer().getOnlinePlayers()) {
+			if (args.length > 0)
+				if (!(target.getName().toLowerCase().contains(args[0].toLowerCase()) ||
+					yip.DeRanebo(target.getDisplayName()).toLowerCase().contains(args[0].toLowerCase())))
+						continue;
+				yip.at(player,
+					"&6"+(yip.ess.getUser(target).isAfk() ? "&dAFK    " : "&aACTIVE ")+ 
+					"&6"+String.format("&a%16s&6 @ &b%-16s", target.getName(),target.getWorld().getName())+
+					"&6 as &e"+target.getDisplayName()+
+					""
+					);
+		}
+		return true;
+	}
+	public boolean roll(Player player, String[] args) {
+		String die = "";
+		StringBuilder msg = new StringBuilder();
+		Random rnd = new Random();
+		int dice = 0;
+		int count = 0;
+		if (args.length == 0) {
+			player.sendMessage("/roll ndx[+ndx...[+n...]] -- Roll a dice to the current channel");
+			return true;
+		} else {
+			die = args[0];
+		}
+		int total = 0;
+		int subtotal = 0;
+		msg.append("rolls &6");
+		String[] rolls = die.split("[+]");
+		for (String roll: rolls) {
+			try {
+				subtotal = 0;
+				if (roll.toLowerCase().contains("d")) {
+					count = Integer.valueOf(roll.toLowerCase().split("d")[0]);
+					dice = Integer.valueOf(roll.toLowerCase().split("d")[1]);
+				} else {
+					count = 0;
+					dice = Integer.valueOf(roll);
+				}
+			} catch (Exception e) {
+				player.sendMessage("There was an error in your dice pool.");
+				return true;
+			}
+			if (count == 0) {
+				subtotal = dice;
+				count = 1;
+				msg.append("&b"+subtotal+"&6+");
+			} else {
+				if (count < 0 || count > 20)
+					count = 1;
+				if (dice < 1) dice = 1;
+				if (dice > 1000) dice = 1000;
+				msg.append("&6"+count+"d"+dice+"&b{");
+				for (int j=0; j<count; j++) {
+					int x = rnd.nextInt(dice)+1;
+					if (x==1) msg.append("&4");
+					if (x==dice) msg.append("&a");
+					msg.append(x+"&b ");
+					subtotal += x;							
+				}
+				msg.setCharAt(msg.length()-1,'=');
+				msg.append(subtotal+"}&e+");						
+			}
+			total += subtotal;
+		}
+		msg.setCharAt(msg.length()-1,'=');
+		msg.append("&a"+total);
+		player.performCommand("me "+msg);
+		return true;
+	}
+	public boolean calc(Player player, String[] args) {
+		Evaluator calc = new Evaluator();
+		calc.putVariable("e", String.valueOf(Math.E));
+		calc.putVariable("pi", String.valueOf(Math.PI));
+		calc.putVariable("c", String.valueOf("299792458"));
+		calc.putVariable("gm", "1.61803398874989484820458683436563811");
+		if (args.length == 0) {
+			yip.at(player, "/calc <expression> -- have the server do your math homework");
+			return true;
+		}
+		try {
+			yip.at(player, "&a[CALC] &6"+args[0]+"&r = &b"+calc.evaluate((args[0])));
+		} catch (Exception e) {
+			yip.at(player, "&a[CALC] &4Your calculation cannot be completed as dialed.  "+e.getCause().getMessage());
+		}
+		return true;
 	}
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		Player player = null;
@@ -425,6 +671,9 @@ public class KitsuCommands implements CommandExecutor {
 	    }
 		if (cmd.getName().equalsIgnoreCase("kn")) {
 			handled = kn(player, args);
+		}
+		if (cmd.getName().equalsIgnoreCase("ww")) {
+			handled = ww(player, args);
 		}
 		if (cmd.getName().equalsIgnoreCase("buy")) {
 			handled = true;
@@ -440,11 +689,19 @@ public class KitsuCommands implements CommandExecutor {
 			else
 				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
 		}
-		if (cmd.getName().equalsIgnoreCase("selldrops")) {
+		if (cmd.getName().equalsIgnoreCase("liquidate")) {
 			handled = true;
 			if (player != null)
-				handled = this.selldrops(player, args);
+				handled = this.liquidate(player, args);
 			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
+		}
+		if (cmd.getName().equalsIgnoreCase("selldrops")) {
+			handled = true;
+			if (player != null) {
+				String[] xx = {"drops"};
+				handled = this.liquidate(player, xx);
+			} else
 				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
 		}
 		if (cmd.getName().equalsIgnoreCase("rep")) {
@@ -468,10 +725,22 @@ public class KitsuCommands implements CommandExecutor {
 			else
 				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
 		}
-		if (cmd.getName().equalsIgnoreCase("tps")) {
+		if (cmd.getName().equalsIgnoreCase("roll")) {
+			if (player != null)
+				handled = this.roll(player, args);
+			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");								
+		}
+		if (cmd.getName().equalsIgnoreCase("calc")) {
+			if (player != null)
+				handled = this.calc(player, args);
+			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");								
+		}
+		if (cmd.getName().equalsIgnoreCase("stack")) {
 			handled = true;
 			if (player != null)
-				handled = this.wp(player, args);
+				handled = this.stack(player, args);
 			else
 				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
 		}

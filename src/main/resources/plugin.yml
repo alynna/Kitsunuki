@@ -1,5 +1,5 @@
 name: Kitsunuki
-version: 1.3.1-1.5
+version: 3.0_1.3.2
 description: Default module for the Kitsunuki Minecraft server
 author: Alynna
 authors: [alynna, alynnafoxie]
@@ -12,16 +12,21 @@ commands:
    kn:
       description: The extension plugin for the kitsunuki server.
       usage: /<command> [reload|version|save|help]
-      permission: kitsunuki.admin
+      permission: kitsunuki.default
       permission-message: You don't have <permission>
    selldrops:
       description: Sell any specially valued drops directly to the server.
       usage: /<command>
       permission: kitsunuki.default
       permission-message: You don't have <permission>
+   liquidate:
+      description: Sell classes of items.
+      usage: /<command> [class]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
    convert:
       description: Convert one item to another.
-      usage: /<command> [resource]
+      usage: /<command> [resource] [amount|all]
       permission: kitsunuki.default
       permission-message: You don't have <permission>
    rep:
@@ -31,34 +36,52 @@ commands:
       permission-message: You don't have <permission>
    buy:
       description: Buy specific items from the server.
-      usage: /<command> [resource]
+      usage: /<command> [resource] [units]
       permission: kitsunuki.default
       permission-message: You don't have <permission>
    xp:
-      description: Get information about your XP level.
-      usage: /<command>
+      description: Get XP information, toggle reporting, make XP bottles
+      usage: /<command> [on|off|drink|check|bottle [xp]]
       permission: kitsunuki.default
       permission-message: You don't have <permission>
    wp:
       description: Get and set personal warps.
-      usage: /<command> <get|set|[warpname]>
+      usage: /<command> [get|set|{warpname}] [warpname] 
       permission: kitsunuki.default
       permission-message: You don't have <permission>
-   tps:
-      description: Display info about lagginess
-      usage: /<command>
+   ww:
+      description: Get info of players online
+      usage: /<command> [searchparams]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   stack:
+      description: Make a stack from the item in hand from items in your inventory (up to 64)
+      usage: /<command> [limit]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   roll:
+      description: Roll some dice.
+      usage: /<command> ndx[+ndx..[+n..]]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   calc:
+      description: Get the server to do your math homework.
+      usage: /<command> [expression]
       permission: kitsunuki.default
       permission-message: You don't have <permission>
 permissions:
    kitsunuki.default:
       description: The default permissions to do anything.
       default: true
+   kitsunuki.player:
+      description: Special permissions for registered playahs.
+      default: false
    kitsunuki.mod:
-      description: Moderator permissions
+      description: Moderator permissions.
       default: op
    kitsunuki.admin:
-      description: The default permissions to do almost anything.
+      description: The default permissions to do almost everything.
       default: op
    kitsunuki.op:
-      description: The default permissions to do anything.
+      description: The default permissions to do everything.
       default: op

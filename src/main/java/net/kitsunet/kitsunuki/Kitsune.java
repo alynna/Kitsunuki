@@ -25,6 +25,7 @@ public class Kitsune extends JavaPlugin {
  	
  	public KitsuCommands yerf = null;
  	public TanukiEvents pon = null;
+ 	public BabyWolves arf = null;
  	public XP xp = null;
  	
  	private FileConfiguration users = null; // User variables
@@ -105,7 +106,7 @@ public class Kitsune extends JavaPlugin {
  	public void saveWorldConfig() {
  	    if (worlds == null || worldsF == null) return;
  	    try {
- 	        EnchantDB().save(worldsF);
+ 	        worldData().save(worldsF);
  	    } catch (IOException ex) {
  	        this.log.severe("Could not save config to " + worldsF);
  	    }
@@ -139,15 +140,24 @@ public class Kitsune extends JavaPlugin {
  		}
  		return success;
  	}
- 	public static String Ranebo(String target) {
+ 	public String Ranebo(String target) {
 		String clr = new String();
 		clr = ChatColor.translateAlternateColorCodes('&', target);
 		return clr;
 	}
+ 	public String DeRanebo(String target) {
+		String clr = new String();
+		clr = ChatColor.stripColor(target);
+		log.info(clr);
+		return clr; 
+ 	}
  	public void at(Player player, String target) {
 		String clr = new String();
 		clr = ChatColor.translateAlternateColorCodes('&', target);
-		player.sendMessage(clr);
+		if (player != null)
+			player.sendMessage(clr);
+		else
+			this.getServer().broadcastMessage("&6[Server]&r "+clr);
 	}
  	@Override
  	public void onEnable() {
@@ -155,6 +165,8 @@ public class Kitsune extends JavaPlugin {
  			yerf = new KitsuCommands(this);
  		if (pon == null)
  			pon = new TanukiEvents(this);
+ 		if (arf == null)
+ 			arf = new BabyWolves(this);
  		if (xp == null)
  			xp = new XP(this);
    	    this.setupEconomy();
@@ -162,18 +174,23 @@ public class Kitsune extends JavaPlugin {
    	    getCommand("kn").setExecutor(yerf);
    	    getCommand("convert").setExecutor(yerf);
    	    getCommand("selldrops").setExecutor(yerf);
+   	    getCommand("liquidate").setExecutor(yerf);
    	    getCommand("buy").setExecutor(yerf);
    	    getCommand("rep").setExecutor(yerf);
    	    getCommand("xp").setExecutor(yerf);
    	    getCommand("wp").setExecutor(yerf);
-   	    getCommand("tps").setExecutor(yerf);
+   	    getCommand("ww").setExecutor(yerf);
+   	    getCommand("stack").setExecutor(yerf);
+   	    getCommand("roll").setExecutor(yerf);   	    
+   	    getCommand("calc").setExecutor(yerf);   	    
 		getServer().getPluginManager().registerEvents(pon, this);
+		getServer().getScheduler().scheduleAsyncRepeatingTask((Plugin)this, (Runnable)arf, 20, 1200);
    	    this.saveDefaultConfig();
 		this.getConfig().options().copyDefaults(false);
 		this.reloadEnchantConfig();
 		this.reloadUserConfig();
 		this.reloadWorldConfig();
-		log.info("Kitsunuki plugin has been enabled.");
+		log.info("Kitsunuki plugin "+this.getDescription().getVersion()+" has been enabled.");
 	}
  	@Override
  	public void onDisable() {
@@ -191,7 +208,31 @@ public class Kitsune extends JavaPlugin {
 	}
 	public String dbl2(Double x) {
 		return String.format("%.2f", x);
-	}	
+	}
+	public long time2t(String x) {
+		long hours = 0;
+		long minutes = 0;		
+		long ticks = 0;
+		if (x.contains(":")) {
+			try {
+				hours = Long.valueOf(x.split(":")[0]);
+				minutes = Long.valueOf(x.split(":")[1]);
+			} catch (Exception e) {
+				return -1;
+			}
+		} else {
+			try {
+				hours = Long.valueOf(x);
+				minutes = 0;
+			} catch (Exception e) {
+				return -1;
+			}
+		}
+		ticks = (hours*1000)+((long)Math.floor(minutes*16.6666666666666666));
+		ticks -= 6000;
+		if (ticks < 0) ticks += 24000;
+		return ticks;
+	}
 	public static void main (String[] args) {
 		System.out.println("This is a plugin for bukkit.  Please run it as such.");	
 	}

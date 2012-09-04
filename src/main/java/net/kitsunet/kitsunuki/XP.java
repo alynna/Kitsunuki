@@ -11,11 +11,11 @@ public class XP
 		this.yip = yip;
 	}
 
-	public void setTotalExperience(final Player player, final int exp)
+	public void setTotalExperience(Player player, int exp)
 	{
 		if (exp < 0)
 		{
-			throw new IllegalArgumentException("Experience is negative!");
+			exp = 0;
 		}
 		player.setExp(0);
 		player.setLevel(0);

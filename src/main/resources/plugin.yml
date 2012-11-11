@@ -1,5 +1,5 @@
 name: Kitsunuki
-version: 3.0_1.3.2
+version: 3.0_1.4.2
 description: Default module for the Kitsunuki Minecraft server
 author: Alynna
 authors: [alynna, alynnafoxie]
@@ -69,7 +69,25 @@ commands:
       usage: /<command> [expression]
       permission: kitsunuki.default
       permission-message: You don't have <permission>
+   chan:
+      description: Unsubscribe or subscribe from channels
+      usage: /<command> [+|-][channel]
+      permission: kitsunuki.default
+      permission-message: You don't have <permission>
+   bc:
+      description: Broadcast globally with the option to turn off.
+      usage: /<command> [text]
+      permission: kitsunuki.mod
+      permission-message: You don't have <permission>
+   fileof:
+      description: Display the pathname of the region file you are standing in
+      usage: /<command> [text]
+      permission: kitsunuki.mod
+      permission-message: You don't have <permission>
 permissions:
+   kitsunuki.yes:
+      description: Negating this will cause there to be a test for kitsunuki.no.<cmd> to see if a command is accessible.
+      default: true
    kitsunuki.default:
       description: The default permissions to do anything.
       default: true

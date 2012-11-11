@@ -1,15 +1,20 @@
 package net.kitsunet.kitsunuki;
 
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
-// This is for the 1 minute scheduler
+// This is for the Kitsunuki periodic scheduler
+//NOTE: This is not guaranteed to run at any particular interval.
+//      Do not depend on it to keep time.  It is in fact configurable.
+//      The default is every 5 seconds.
+
 
 public class BabyWolves implements Runnable {
 	private Kitsune yip;
 	private KitsuCommands yerf;
 	private TanukiEvents pon;
 	
-	public Integer min = 0;
+	public Long beat = 0L;
 	
 	public BabyWolves(Kitsune yip) {
 		this.yip = yip;
@@ -38,11 +43,19 @@ public class BabyWolves implements Runnable {
 
 	@Override
 	public void run() { 
-		//yip.log.info("BabyWolves entered.");
+		for (Player player: yip.getServer().getOnlinePlayers()) {
+			if (pon.lastkilltime.get(player) == null) continue;
+			if (pon.lastkillcount.get(player) <= 5) continue;
+			if (pon.lastkilltime.get(player)+(yip.getConfig().getLong("combo.time",10)*1000) < System.currentTimeMillis()) {
+				yip.bc("&b["+player.getDisplayName()+"] &c"+
+						yip.getConfig().getString("combo.msg.final", "Final combo #!").replace("#", pon.lastkillcount.get(player).toString()),"Grind");
+				pon.lastkillcount.put(player, 0);
+			}				
+		}
 		for (World wld: yip.getServer().getWorlds()) {
 			if (yip.worldData().isConfigurationSection(wld.getName()))
 				timeSkew(wld);
 		}
-		min++;
+		beat++;
 	}
 }

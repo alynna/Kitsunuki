@@ -162,7 +162,7 @@ public class Kitsune extends JavaPlugin {
 			this.getServer().broadcastMessage("&6[Server]&r "+clr);
 	}
  	// Method to match items with their metadata.  This function 
- 	// ignores the size of the itemstack and instead is cognizant of
+ 	// ignores the size of the itemstack when searching and instead is cognizant of
  	// the item's data.   It returns the number of matching items
  	// found.
  	public int invCount(Inventory inventory, ItemStack itemstack) {
@@ -208,8 +208,12 @@ public class Kitsune extends JavaPlugin {
    	    getCommand("stack").setExecutor(yerf);
    	    getCommand("roll").setExecutor(yerf);   	    
    	    getCommand("calc").setExecutor(yerf);   	    
+   	    getCommand("bc").setExecutor(yerf);   	    
+   	    getCommand("chan").setExecutor(yerf);   	    
+   	    getCommand("fileof").setExecutor(yerf);   	    
 		getServer().getPluginManager().registerEvents(pon, this);
-		getServer().getScheduler().scheduleAsyncRepeatingTask((Plugin)this, (Runnable)arf, 20, 1200);
+		getServer().getScheduler().scheduleAsyncRepeatingTask(
+				(Plugin)this, (Runnable)arf, 20, this.getConfig().getInt("config.beat", 100));
    	    this.saveDefaultConfig();
 		this.getConfig().options().copyDefaults(false);
 		this.reloadEnchantConfig();
@@ -233,6 +237,25 @@ public class Kitsune extends JavaPlugin {
 	}
 	public String dbl2(Double x) {
 		return String.format("%.2f", x);
+	}
+	public void bc(String message, String channel, boolean def) {
+		boolean state = false;
+		for (Player player: this.getServer().getOnlinePlayers()) {
+			if (this.userData().get(player.getName()+".chan."+channel.toLowerCase(),null) == null)
+				state = def;
+			else 
+				state = this.userData().getBoolean(player.getName()+".chan."+channel.toLowerCase(),false);
+			if (this.userData().get(player.getName()+".chan.all") != null)
+				state = this.userData().getBoolean(player.getName()+".chan.all");				
+			if (state) 
+				at(player,"&6[&e"+channel+"&6] "+message);	
+		}
+	}
+	public void bc(String message, String channel) {
+		bc(message, channel, false); 
+	}
+	public void bc(String message) {
+		bc(message, "global", false);
 	}
 	public long time2t(String x) {
 		long hours = 0;

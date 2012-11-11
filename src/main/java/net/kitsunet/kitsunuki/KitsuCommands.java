@@ -30,7 +30,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 import net.sourceforge.jeval.Evaluator;
 
-import com.earth2me.essentials.user.Inventory;
 import com.google.common.base.Joiner;
 
 public class KitsuCommands implements CommandExecutor {
@@ -59,7 +58,13 @@ public class KitsuCommands implements CommandExecutor {
 				if (args[0].equalsIgnoreCase("price")) {
 					mode = 1; want = args[1];
 				} else {
-					units = Integer.valueOf(args[1]);
+					try {
+						units = Integer.valueOf(args[1]);
+					} catch (Exception e) {
+						yip.at(player, "&4Quantity to buy was not numeric.  Perhaps you specified the quantity first."+
+										"  The actual syntax is: /buy <item> <amount>");
+						return true;
+					}
 					if (units < 1) units = 1;
 					if (units > 64) units = 64;
 				}
@@ -201,8 +206,12 @@ public class KitsuCommands implements CommandExecutor {
 				yip.at(player, "Held item "+held.getType().toString()+" has durability "+String.valueOf(held.getDurability()));
 				return true;
 			}
-			if (held.getType() == Material.AIR) {
-				yip.at(player, "&cWe cannot repair air, Keptin!");
+			if (held.getType() == Material.AIR || held.getType().getMaxDurability() == 0) {
+				yip.at(player, "&cWe cannot repair this, Keptin!");
+				return true;
+			}
+			if (held.getType() == Material.EXP_BOTTLE) {
+				yip.at(player, "&cYou can't repair an XP bottle.!");
 				return true;
 			}
 			if (held.getDurability() == 0) {
@@ -323,6 +332,12 @@ public class KitsuCommands implements CommandExecutor {
 			yip.at(player,"&6Grand total: &a"+yip.currency(total)+"&6 earned [&a"+yip.currency(prev)+"&6 -> &a"+
 					yip.currency(yip.tails.getBalance(player.getName()))+"&6]");						
 		}
+		return true;
+	}
+	public boolean fileof(Player player, String[] args) {
+		yip.at(player, "This region's filename: "+player.getWorld().getName()+"/r."+
+				(int)Math.floor(player.getLocation().getX()/(32.0*16.0))+"."+
+				(int)Math.floor(player.getLocation().getY()/(32.0*16.0))+".mcr");
 		return true;
 	}
 	public boolean xp(Player player, String[] args) {
@@ -529,12 +544,6 @@ public class KitsuCommands implements CommandExecutor {
 		if (count < 0 || count > 64) count = 64;
 		PlayerInventory inventory = player.getInventory();
 		ItemStack give = new ItemStack(inventory.getItemInHand());
-		if (give.getType()==Material.EXP_BOTTLE) {
-			yip.at(player, "&eCowardly refusing to allow you to stack XP potions to save you from losing the extra XP stored in them.  "+
-		                   "To create a new stack of XP potions, it's recommended you drink the potions you want to stack, then create a new "+
-					       "stack using &d/xp bottle [amount]&e a few times.");
-			return true;
-		}
 		if (give.getAmount() >= count) {
 			yip.at(player, "&6Your stack is already at least that large.");
 			return true;
@@ -543,6 +552,10 @@ public class KitsuCommands implements CommandExecutor {
 			yip.at(player, "&4Sorry, you cannot stack items that are enchanted.");
 			return true;
 		}			
+		if (give.getType()==Material.EXP_BOTTLE) {
+			yip.at(player, "&eNOTE: This will only stack XP bottles of equal value.   The XP in the bottle you are holding is &d"+
+					give.getDurability()+"XP");
+		}
 		ItemStack held = new ItemStack(give); held.setAmount(1);
 		inventory.setItemInHand(new ItemStack(Material.AIR, 0));
 		if (!yip.invContains(inventory, held, 1)) {
@@ -647,7 +660,7 @@ public class KitsuCommands implements CommandExecutor {
 		}
 		msg.setCharAt(msg.length()-1,'=');
 		msg.append("&a"+total);
-		player.performCommand("me "+msg);
+		yip.bc(player.getDisplayName()+" "+msg,"Roll",true);
 		return true;
 	}
 	public boolean calc(Player player, String[] args) {
@@ -667,12 +680,49 @@ public class KitsuCommands implements CommandExecutor {
 		}
 		return true;
 	}
+	public boolean chan(Player player, String[] args) {
+		if (args.length == 0) {
+			ConfigurationSection chans = yip.userData().getConfigurationSection(player.getName()+".chan");
+			String x = "";
+			if (chans != null && (chans.getKeys(false).size() > 0)) {
+				for (String chan: chans.getKeys(false)) {
+					x=x+(yip.getConfig().getBoolean(player.getName()+".chan."+chan) ? "+" : "-")+chan+" ";
+				}
+			} else {
+				x = "<none>";
+			}
+			yip.at(player, "&d[&eChan&d] &6Channel statuses: "+x);	
+		} else {
+			if (args[0].toLowerCase().startsWith("-")) {
+				yip.userData().set(player.getName()+".chan."+args[0].substring(1).toLowerCase(), false);
+			} else if (args[0].toLowerCase().startsWith("+")) {
+				yip.userData().set(player.getName()+".chan."+args[0].substring(1).toLowerCase(), true);				
+			} else {
+				yip.userData().set(player.getName()+".chan."+args[0].toLowerCase(), null);								
+			}
+			yip.at(player, "&d[&eChan&d] &6Channel &5"+args[0].toLowerCase().replaceAll("[+-]", "")+"&6 was set to "+
+			    (yip.userData().get(player.getName()+".chan."+args[0].toLowerCase().replaceAll("[+-]", ""),null) == null ? "&edefault" :
+			     (yip.userData().getBoolean(player.getName()+".chan."+args[0].toLowerCase().replaceAll("[+-]", ""),true) ? "&aon" : "&coff" ))		    
+			     );				
+		}
+		return true;
+	}
+	public boolean bc(Player player, String[] args) {
+		yip.bc("&6[Public] &r"+Joiner.on(" ").join(args), "public");
+		return true;
+		
+	}
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		Player player = null;
 		boolean handled = false;
 		if (sender instanceof Player) {
 			player = (Player) sender;
 	    }
+		if (!player.hasPermission("kitsunuki.yes") && player.hasPermission("kitsunuki.no."+cmd.getName().toLowerCase())) {
+			if (player != null)
+				yip.at(player, "&4Epic fail.  I can't believe they gave you a starship.");
+			return true;
+		}
 		if (cmd.getName().equalsIgnoreCase("kn")) {
 			handled = kn(player, args);
 		}
@@ -745,6 +795,27 @@ public class KitsuCommands implements CommandExecutor {
 			handled = true;
 			if (player != null)
 				handled = this.stack(player, args);
+			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
+		}
+		if (cmd.getName().equalsIgnoreCase("bc")) {
+			handled = true;
+			if (player != null)
+				handled = this.bc(player, args);
+			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
+		}
+		if (cmd.getName().equalsIgnoreCase("chan")) {
+			handled = true;
+			if (player != null)
+				handled = this.chan(player, args);
+			else
+				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
+		}
+		if (cmd.getName().equalsIgnoreCase("fileof")) {
+			handled = true;
+			if (player != null)
+				handled = this.fileof(player, args);
 			else
 				yip.log.info("What does GOD need with "+cmd.getName()+"?");				
 		}
